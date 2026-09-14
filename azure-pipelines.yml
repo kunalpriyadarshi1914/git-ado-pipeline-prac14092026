@@ -2,19 +2,19 @@ trigger: none
 pool: ps-pool
 
 stages:
-  - stage: terraform-install
+  - stage: terraform_install
     displayName: terraform installation
     jobs:
-      - job: terraform-job1
+      - job: terraform_job1
         steps:
           - task: TerraformInstaller@1
             inputs:
               terraformVersion: 'latest'
     
-  - stage: terraform-init
+  - stage: terraform_init
     displayName: terraform init
     jobs:
-      - job: terraform-job2
+      - job: terraform_job2
         steps:
           - task: TerraformTask@5
             inputs:
@@ -26,12 +26,21 @@ stages:
               backendAzureRmContainerName: 'pipeline-container'
               backendAzureRmKey: 'pipeline.tfstate'
 
-  - stage: terraform-plan
+  - stage: terraform_plan
     displayName: terraform plan
-    dependsOn: terraform-init
+    dependsOn: terraform_init
     jobs:
-      - job: terraform-job2
+      - job: terraform_job3
         steps:
+          - task: TerraformTask@5
+            inputs:
+              provider: 'azurerm'
+              command: 'init'
+              workingDirectory: '$(System.DefaultWorkingDirectory)/'
+              backendServiceArm: 'ps-svc11092026'
+              backendAzureRmStorageAccountName: 'piplinestg1914'
+              backendAzureRmContainerName: 'pipeline-container'
+              backendAzureRmKey: 'pipeline.tfstate'
           - task: TerraformTask@5
             inputs:
               provider: 'azurerm'
@@ -46,11 +55,11 @@ stages:
               artifact: 'terraform-plan'
               publishLocation: 'pipeline'
 
-  - stage: terraform-apply
+  - stage: terraform_apply
     displayName: terraform apply
-    dependsOn: terraform-plan
+    dependsOn: terraform_plan
     jobs:
-      - job: terraform-job3
+      - job: terraform_job4
         steps:
           - task: TerraformTask@5
             inputs:
@@ -64,7 +73,7 @@ stages:
           - task: DownloadPipelineArtifact@2
             inputs:
               artifact: 'terraform-plan'
-              targetPath: '(System.DefaultWorkingDirectory)'
+              targetPath: '$(System.DefaultWorkingDirectory)'
           - task: TerraformTask@5
             inputs:
               provider: 'azurerm'
