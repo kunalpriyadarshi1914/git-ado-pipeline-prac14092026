@@ -1,0 +1,93 @@
+trigger: none
+pool: ps-pool
+
+stages:
+  - stage: terraform-install
+    displayName: terraform installation
+    jobs:
+      - job: terraform-job1
+        steps:
+          - task: TerraformInstaller@1
+            inputs:
+              terraformVersion: 'latest'
+    
+  - stage: terraform-init
+    displayName: terraform init
+    jobs:
+      - job: terraform-job2
+        steps:
+          - task: TerraformTask@5
+            inputs:
+              provider: 'azurerm'
+              command: 'init'
+              workingDirectory: '$(System.DefaultWorkingDirectory)/'
+              backendServiceArm: 'ps-svc11092026'
+              backendAzureRmStorageAccountName: 'piplinestg1914'
+              backendAzureRmContainerName: 'pipeline-container'
+              backendAzureRmKey: 'pipeline.tfstate'
+
+  - stage: terraform-plan
+    displayName: terraform plan
+    dependsOn: terraform-init
+    jobs:
+      - job: terraform-job2
+        steps:
+          - task: TerraformTask@5
+            inputs:
+              provider: 'azurerm'
+              command: 'plan'
+              workingDirectory: '$(System.DefaultWorkingDirectory)/'
+              commandOptions: '-out=tfplan'
+              environmentServiceNameAzureRM: 'ps-svc11092026'
+
+          - task: PublishPipelineArtifact@1
+            inputs:
+              targetPath: '$(System.DefaultWorkingDirectory)/tfplan'
+              artifact: 'terraform-plan'
+              publishLocation: 'pipeline'
+
+  - stage: terraform-apply
+    displayName: terraform apply
+    dependsOn: terraform-plan
+    jobs:
+      - job: terraform-job3
+        steps:
+          - task: TerraformTask@5
+            inputs:
+              provider: 'azurerm'
+              command: 'init'
+              workingDirectory: '$(System.DefaultWorkingDirectory)/'
+              backendServiceArm: 'ps-svc11092026'
+              backendAzureRmStorageAccountName: 'piplinestg1914'
+              backendAzureRmContainerName: 'pipeline-container'
+              backendAzureRmKey: 'pipeline.tfstate'
+          - task: DownloadPipelineArtifact@2
+            inputs:
+              artifact: 'terraform-plan'
+              targetPath: '(System.DefaultWorkingDirectory)'
+          - task: TerraformTask@5
+            inputs:
+              provider: 'azurerm'
+              command: 'apply'
+              
+              workingDirectory: '$(System.DefaultWorkingDirectory)/'
+              
+              commandOptions: 'tfplan'
+              environmentServiceNameAzureRM: 'ps-svc11092026'
+
+
+          # - task: DownloadPipelineArtifact@2
+          #   inputs:
+          #     buildType: 'current'
+          #     targetPath: '$(Pipeline.Workspace)'
+      
+
+          
+
+          
+
+  
+    
+    
+
+  
